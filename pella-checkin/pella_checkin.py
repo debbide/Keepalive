@@ -133,14 +133,18 @@ class PellaAutoRenew:
         )
 
     def safe_js_set_value(self, element, value):
-        """安全的 JavaScript 设置值（修复注入漏洞）"""
-        # 使用 arguments[1] 传递值，避免字符串拼接导致的注入问题
-        self.driver.execute_script(
-            "arguments[0].value = arguments[1];"
-            "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));"
-            "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));",
-            element, value
-        )
+        """使用 send_keys 模拟真实输入，兼容性更好"""
+        try:
+            element.clear()
+            element.send_keys(value)
+        except Exception as e:
+            logger.warning(f"⚠️ send_keys 失败，尝试 JS 输入: {e}")
+            self.driver.execute_script(
+                "arguments[0].value = arguments[1];"
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));"
+                "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));",
+                element, value
+            )
 
     def find_element_with_multiple_selectors(self, selectors, timeout=10):
         """尝试多个选择器查找元素"""
