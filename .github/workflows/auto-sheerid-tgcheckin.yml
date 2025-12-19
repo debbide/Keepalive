@@ -1,0 +1,36 @@
+name: Auto SheerID - TG 自动签到
+
+on:
+  workflow_dispatch:
+  #schedule:
+  #  - cron: '10 0 * * *' # cron 格式: 分 时 日 月 周
+  workflow_run:
+    workflows: ["CloudCat TG 频道自动签到"]
+    types: [completed]
+
+jobs:
+  tg_checkin:
+    runs-on: ubuntu-latest
+    
+    env:
+      TG_API_ID: ${{ secrets.TG_API_ID }}
+      TG_API_HASH: ${{ secrets.TG_API_HASH }}
+      TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+      TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+
+    steps:
+    - name: ⬇️ 检出代码 (Checkout repository)
+      uses: actions/checkout@v4
+      
+    - name: 🐍 安装 Python 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+        
+    - name: 📦 安装 Python 依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r tg-checkin/requirements.txt
+        
+    - name: 🚀 执行 TG 频道签到脚本
+      run: python -u tg-checkin/auto-sheerid.py

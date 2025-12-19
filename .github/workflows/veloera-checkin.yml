@@ -1,0 +1,47 @@
+name: Veloera 通用签到
+
+on:
+  #schedule:
+  #  - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  checkin:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r veloera-checkin/requirements.txt
+
+      - name: Run Veloera Check-in
+        env:
+          # --- 配置方式一：多账户签到 ---
+          # 将多账户的 JSON 配置作为一个 Secret 传入
+          # VELOERA_CONFIG_FILE: config.json
+          # VELOERA_CONFIG_JSON: ${{ secrets.VELOERA_CONFIG_JSON }}
+          
+          # --- 配置方式二：单账户签到 ---
+          # 如果你只有一个账户，也可以用下面的方式
+          # 需要在 Secrets 中分别创建 MIAOGEAPI_TOKEN 和 MIAOGEAPI_USER_ID
+          MIAOGEAPI_TOKEN: ${{ secrets.MIAOGEAPI_TOKEN }}
+          MIAOGEAPI_USER_ID: ${{ secrets.MIAOGEAPI_USER_ID }}
+
+        run: |
+          # 如果 VELOERA_CONFIG_JSON 这个 Secret 存在，则将其内容写入文件
+          if [ -n "$VELOERA_CONFIG_JSON" ]; then
+            echo "$VELOERA_CONFIG_JSON" > $VELOERA_CONFIG_FILE
+            echo "从 Secret 加载了多账户配置文件..."
+          fi
+          
+          # 运行 Python 脚本
+          python veloera-checkin/veloera_checkin.py

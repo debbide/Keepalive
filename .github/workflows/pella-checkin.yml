@@ -1,0 +1,41 @@
+name: Pella自动续期
+
+on:
+  schedule:
+    # 每天UTC时间00:00运行（北京时间08:00）
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  checkin:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r pella-checkin/requirements.txt
+        
+    - name: Install Chrome
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        
+    - name: Run auto checkin
+      env:
+        PELLA_ACCOUNTS: ${{ secrets.PELLA_ACCOUNTS }}
+        PELLA_EMAIL: ${{ secrets.PELLA_EMAIL }}
+        PELLA_PASSWORD: ${{ secrets.PELLA_PASSWORD }}
+        TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        GITHUB_ACTIONS: true
+      run: |
+        python pella-checkin/pella_checkin.py

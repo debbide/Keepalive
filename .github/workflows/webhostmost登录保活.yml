@@ -1,0 +1,33 @@
+name: webhostmost登录保活
+
+on:
+  # 每月的第一天 00:00 UTC 执行
+  schedule:
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  login_check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r webhostmost-checkin/requirements.txt
+
+      - name: Execute Login Script
+        env:
+          WHM_ACCOUNT: ${{ secrets.WHM_ACCOUNT }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+        run: |
+          python webhostmost-checkin/checkin.py
