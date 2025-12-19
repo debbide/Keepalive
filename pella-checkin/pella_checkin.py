@@ -216,14 +216,14 @@ class PellaAutoRenew:
 
             continue_btn_selectors = [
                 # Next 按钮（Pella 使用的是 Next）
-                (By.XPATH, "//button[contains(translate(text(), 'NEXT', 'next'), 'next')]"),
-                (By.XPATH, "//button[contains(translate(., 'NEXT', 'next'), 'next')]"),
+                (By.XPATH, "//button[contains(translate(text(), 'NEXT', 'next'), 'next') and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
+                (By.XPATH, "//button[contains(translate(., 'NEXT', 'next'), 'next') and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
                 # Continue 按钮（备用）
-                (By.XPATH, "//button[contains(translate(text(), 'CONTINUE', 'continue'), 'continue')]"),
-                (By.XPATH, "//button[contains(translate(., 'CONTINUE', 'continue'), 'continue')]"),
+                (By.XPATH, "//button[contains(translate(text(), 'CONTINUE', 'continue'), 'continue') and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
+                (By.XPATH, "//button[contains(translate(., 'CONTINUE', 'continue'), 'continue') and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
                 # 通用提交按钮
-                (By.CSS_SELECTOR, "button[type='submit']"),
-                (By.XPATH, "//button[@type='submit']"),
+                (By.CSS_SELECTOR, "button[type='submit']:not([aria-label*='Google'])"),
+                (By.XPATH, "//button[@type='submit' and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
             ]
 
             continue_btn_1 = self.find_element_with_multiple_selectors(continue_btn_selectors, 10)
@@ -288,24 +288,24 @@ class PellaAutoRenew:
 
             login_btn_selectors = [
                 # Next 按钮（优先，Pella 密码页使用 Next）
-                (By.XPATH, "//button[contains(translate(text(), 'NEXT', 'next'), 'next')]"),
-                (By.XPATH, "//button[contains(translate(., 'NEXT', 'next'), 'next')]"),
-                (By.XPATH, "//button[@type='submit' and contains(translate(., 'NEXT', 'next'), 'next')]"),
+                (By.XPATH, "//button[contains(translate(text(), 'NEXT', 'next'), 'next') and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
+                (By.XPATH, "//button[contains(translate(., 'NEXT', 'next'), 'next') and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
+                (By.XPATH, "//button[@type='submit' and contains(translate(., 'NEXT', 'next'), 'next') and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
                 # Continue 按钮（备用）
-                (By.XPATH, "//button[contains(translate(text(), 'CONTINUE', 'continue'), 'continue')]"),
-                (By.XPATH, "//button[contains(translate(., 'CONTINUE', 'continue'), 'continue')]"),
-                (By.XPATH, "//button[@type='submit' and contains(translate(., 'CONTINUE', 'continue'), 'continue')]"),
+                (By.XPATH, "//button[contains(translate(text(), 'CONTINUE', 'continue'), 'continue') and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
+                (By.XPATH, "//button[contains(translate(., 'CONTINUE', 'continue'), 'continue') and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
+                (By.XPATH, "//button[@type='submit' and contains(translate(., 'CONTINUE', 'continue'), 'continue') and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
                 # 表单内的提交按钮
-                (By.CSS_SELECTOR, "form button[type='submit']"),
-                (By.XPATH, "//form//button[@type='submit']"),
+                (By.CSS_SELECTOR, "form button[type='submit']:not([aria-label*='Google'])"),
+                (By.XPATH, "//form//button[@type='submit' and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
                 # Clerk 认证系统特定选择器
                 (By.XPATH, "//button[contains(@class, 'cl-formButtonPrimary')]"),
                 (By.XPATH, "//form//button[contains(@class, 'cl-')]"),
                 # 通用提交按钮
-                (By.CSS_SELECTOR, "button[type='submit']:not([disabled])"),
-                (By.XPATH, "//button[@type='submit' and not(@disabled)]"),
+                (By.CSS_SELECTOR, "button[type='submit']:not([disabled]):not([aria-label*='Google'])"),
+                (By.XPATH, "//button[@type='submit' and not(@disabled) and not(contains(translate(., 'GOOGLE', 'google'), 'google'))]"),
                 # 任何可见的提交按钮
-                (By.CSS_SELECTOR, "button[type='submit']"),
+                (By.CSS_SELECTOR, "button[type='submit']:not([aria-label*='Google'])"),
             ]
 
             login_btn = self.find_element_with_multiple_selectors(login_btn_selectors, 25)
@@ -418,7 +418,9 @@ class PellaAutoRenew:
             current_url = self.driver.current_url
             logger.error(f"❌ 登录超时 - 当前 URL: {current_url}")
 
-            if "login" in current_url:
+            if "accounts.google.com" in current_url:
+                raise Exception("❌ 检测到重定向至 Google 登录页面。脚本不支持 Google OAuth 登录，请确保您的 Pella 账号已设置密码，并支持直接使用邮箱+密码登录。")
+            elif "login" in current_url:
                 raise Exception("❌ 登录失败，仍停留在登录页面")
             else:
                 logger.warning(f"⚠️ 未跳转到预期的 HOME URL，但已离开登录页: {current_url}")
