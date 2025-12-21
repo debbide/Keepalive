@@ -573,13 +573,22 @@ class PellaAutoRenew:
                 if not renew_buttons:
                     break
 
-                button = renew_buttons[0]
-                renew_url = button.get_attribute('href')
-                button_text = button.text.strip()
-
-                # 检查是否已处理过此链接
-                if renew_url in processed_urls:
-                    logger.info(f"⏭️ 跳过已处理的链接: {renew_url}")
+                # 遍历所有按钮，找到第一个未处理的
+                button = None
+                renew_url = None
+                button_text = None
+                
+                for btn in renew_buttons:
+                    url = btn.get_attribute('href')
+                    if url and url not in processed_urls:
+                        button = btn
+                        renew_url = url
+                        button_text = btn.text.strip()
+                        break
+                
+                # 如果所有按钮都已处理过，退出循环
+                if not button or not renew_url:
+                    logger.info("⏭️ 所有续期链接都已处理完成")
                     break
 
                 processed_urls.add(renew_url)
