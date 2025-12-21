@@ -638,6 +638,41 @@ class PellaAutoRenew:
                     if not continue_clicked:
                         logger.warning("⚠️ 未找到 Continue 按钮，但继续等待...")
 
+                    # 等待页面加载后查找 "I am not a robot" 按钮
+                    time.sleep(3)
+                    logger.info("🔍 查找 'I am not a robot' 按钮...")
+
+                    robot_clicked = False
+                    robot_selectors = [
+                        (By.XPATH, "//button[contains(text(), 'I am not a robot')]"),
+                        (By.XPATH, "//a[contains(text(), 'I am not a robot')]"),
+                        (By.XPATH, "//*[contains(text(), 'I am not a robot')]"),
+                        (By.XPATH, "//button[contains(text(), 'not a robot')]"),
+                        (By.XPATH, "//*[contains(text(), 'not a robot')]"),
+                        (By.XPATH, "//button[contains(text(), 'Verify')]"),
+                        (By.XPATH, "//button[contains(text(), 'verify')]"),
+                        # 通用验证按钮
+                        (By.CSS_SELECTOR, "button[class*='verify'], a[class*='verify']"),
+                        (By.CSS_SELECTOR, "#verify-btn, .verify-btn"),
+                    ]
+
+                    for selector_type, selector_value in robot_selectors:
+                        try:
+                            robot_btn = WebDriverWait(self.driver, 5).until(
+                                EC.element_to_be_clickable((selector_type, selector_value))
+                            )
+                            if robot_btn and robot_btn.is_displayed():
+                                logger.info(f"✅ 找到 'I am not a robot' 按钮: {selector_value}")
+                                self.driver.execute_script("arguments[0].click();", robot_btn)
+                                logger.info("✅ 已点击 'I am not a robot' 按钮")
+                                robot_clicked = True
+                                break
+                        except:
+                            continue
+
+                    if not robot_clicked:
+                        logger.warning("⚠️ 未找到 'I am not a robot' 按钮")
+
                     # 等待续期完成
                     logger.info(f"⏳ 等待 {self.RENEW_WAIT_TIME} 秒...")
                     time.sleep(self.RENEW_WAIT_TIME)
