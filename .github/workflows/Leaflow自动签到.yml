@@ -1,9 +1,9 @@
 name: Leaflow自动签到
 
 on:
-  schedule:
-    # 每天UTC时间00:00运行（北京时间11:00）
-    - cron: '0 3 * * *'
+  #schedule:
+  #  # 每天UTC时间00:00运行（北京时间11:00）
+  #  - cron: '0 3 * * *'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
