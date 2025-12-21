@@ -163,20 +163,65 @@ class PellaAutoRenew:
 
     def extract_expiry_days(self, page_source):
         """从页面源码中提取过期时间"""
+        days_int = 0
+        hours_int = 0
+        minutes_int = 0
+        found = False
+
+        # 格式1: "Your server expires in 14D 5H 30M" (旧格式)
         match = re.search(r"Your server expires in\s*(\d+)D\s*(\d+)H\s*(\d+)M", page_source)
         if match:
             days_int = int(match.group(1))
             hours_int = int(match.group(2))
             minutes_int = int(match.group(3))
-            detailed_string = f"{days_int} 天 {hours_int} 小时 {minutes_int} 分钟"
+            found = True
+
+        # 格式2: "Expires in 30H 3M" (新格式 - 标题区)
+        if not found:
+            match = re.search(r"Expires in\s*(\d+)H\s*(\d+)M", page_source, re.IGNORECASE)
+            if match:
+                hours_int = int(match.group(1))
+                minutes_int = int(match.group(2))
+                found = True
+
+        # 格式3: "Your server is expiring in 20 Hours 3 Minutes" (新格式 - 正文区)
+        if not found:
+            match = re.search(r"expiring in\s*(\d+)\s*Hours?\s*(\d+)\s*Minutes?", page_source, re.IGNORECASE)
+            if match:
+                hours_int = int(match.group(1))
+                minutes_int = int(match.group(2))
+                found = True
+
+        # 格式4: "Expires in 5D 10H 30M" (带天数的新格式)
+        if not found:
+            match = re.search(r"Expires in\s*(\d+)D\s*(\d+)H\s*(\d+)M", page_source, re.IGNORECASE)
+            if match:
+                days_int = int(match.group(1))
+                hours_int = int(match.group(2))
+                minutes_int = int(match.group(3))
+                found = True
+
+        # 格式5: 只有天数 "Your server expires in 14D"
+        if not found:
+            match = re.search(r"(?:expires|expiring) in\s*(\d+)D", page_source, re.IGNORECASE)
+            if match:
+                days_int = int(match.group(1))
+                found = True
+
+        if found:
+            # 构建详细字符串
+            parts = []
+            if days_int > 0:
+                parts.append(f"{days_int} 天")
+            if hours_int > 0:
+                parts.append(f"{hours_int} 小时")
+            if minutes_int > 0:
+                parts.append(f"{minutes_int} 分钟")
+            detailed_string = " ".join(parts) if parts else "0 分钟"
+
+            # 计算总天数（浮点数）
             total_days_float = days_int + (hours_int / 24) + (minutes_int / (24 * 60))
             return detailed_string, total_days_float
-
-        match_simple = re.search(r"Your server expires in\s*(\d+)D", page_source)
-        if match_simple:
-            days_int = int(match_simple.group(1))
-            detailed_string = f"{days_int} 天"
-            return detailed_string, float(days_int)
 
         logger.warning("⚠️ 页面中未找到有效的服务器过期时间格式。")
         return "无法提取", -1.0
