@@ -573,18 +573,41 @@ class PellaAutoRenew:
                 if not renew_buttons:
                     break
 
-                # 遍历所有按钮，找到第一个未处理的
+                # 遍历所有按钮，找到第一个未处理且可用的
                 button = None
                 renew_url = None
                 button_text = None
                 
                 for btn in renew_buttons:
                     url = btn.get_attribute('href')
-                    if url and url not in processed_urls:
-                        button = btn
-                        renew_url = url
-                        button_text = btn.text.strip()
-                        break
+                    if not url or url in processed_urls:
+                        continue
+                    
+                    # 检查按钮是否为暗色（已处理）
+                    try:
+                        # 获取元素的 opacity 样式
+                        opacity = self.driver.execute_script(
+                            "return window.getComputedStyle(arguments[0]).opacity;", btn
+                        )
+                        opacity_value = float(opacity) if opacity else 1.0
+                        
+                        # 检查是否有 opacity-50 或 pointer-events-none 类
+                        class_attr = btn.get_attribute('class') or ''
+                        is_disabled = ('opacity-50' in class_attr or 
+                                      'pointer-events-none' in class_attr or
+                                      opacity_value < 0.8)
+                        
+                        if is_disabled:
+                            logger.info(f"⏭️ 跳过暗色/已处理按钮: {btn.text.strip()} (opacity={opacity_value})")
+                            continue
+                            
+                    except Exception as e:
+                        logger.debug(f"检查按钮样式出错: {e}")
+                    
+                    button = btn
+                    renew_url = url
+                    button_text = btn.text.strip()
+                    break
                 
                 # 如果所有按钮都已处理过，退出循环
                 if not button or not renew_url:
