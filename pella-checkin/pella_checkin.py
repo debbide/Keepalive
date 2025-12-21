@@ -545,8 +545,10 @@ class PellaAutoRenew:
 
             renewed_count = 0
             original_window = self.driver.current_window_handle
+            processed_urls = set()  # 记录已处理的链接，防止重复
+            max_renew_count = 2  # 最大续期次数限制
 
-            while True:
+            while renewed_count < max_renew_count:
                 renew_buttons = []
 
                 # 尝试多种选择器
@@ -575,6 +577,12 @@ class PellaAutoRenew:
                 renew_url = button.get_attribute('href')
                 button_text = button.text.strip()
 
+                # 检查是否已处理过此链接
+                if renew_url in processed_urls:
+                    logger.info(f"⏭️ 跳过已处理的链接: {renew_url}")
+                    break
+
+                processed_urls.add(renew_url)
                 logger.info(f"🚀 处理第 {renewed_count + 1} 个续期链接: {button_text}")
                 logger.info(f"🔗 链接: {renew_url}")
 
