@@ -681,9 +681,43 @@ class PellaAutoRenew:
                     if not robot_clicked:
                         logger.warning("⚠️ 未找到 'I am not a robot' 按钮")
 
-                    # 等待续期完成
-                    logger.info(f"⏳ 等待 {self.RENEW_WAIT_TIME} 秒...")
+                    # 等待倒计时完成
+                    logger.info(f"⏳ 等待 {self.RENEW_WAIT_TIME} 秒倒计时...")
                     time.sleep(self.RENEW_WAIT_TIME)
+
+                    # 查找并点击 "Go" 按钮
+                    logger.info("🔍 查找 'Go' 按钮...")
+                    go_clicked = False
+                    go_selectors = [
+                        (By.XPATH, "//button[contains(text(), 'Go')]"),
+                        (By.XPATH, "//a[contains(text(), 'Go')]"),
+                        (By.XPATH, "//*[contains(text(), 'Go →')]"),
+                        (By.XPATH, "//*[contains(text(), 'Go→')]"),
+                        (By.XPATH, "//button[contains(., 'Go')]"),
+                        (By.XPATH, "//a[contains(., 'Go')]"),
+                        # 通用按钮选择器
+                        (By.CSS_SELECTOR, "button.go-btn, a.go-btn"),
+                        (By.CSS_SELECTOR, "button[class*='go'], a[class*='go']"),
+                        (By.CSS_SELECTOR, "#go-btn, .go-btn"),
+                    ]
+
+                    for selector_type, selector_value in go_selectors:
+                        try:
+                            go_btn = WebDriverWait(self.driver, 10).until(
+                                EC.element_to_be_clickable((selector_type, selector_value))
+                            )
+                            if go_btn and go_btn.is_displayed():
+                                logger.info(f"✅ 找到 'Go' 按钮: {selector_value}")
+                                self.driver.execute_script("arguments[0].click();", go_btn)
+                                logger.info("✅ 已点击 'Go' 按钮，续期完成!")
+                                go_clicked = True
+                                time.sleep(3)  # 等待续期生效
+                                break
+                        except:
+                            continue
+
+                    if not go_clicked:
+                        logger.warning("⚠️ 未找到 'Go' 按钮，但可能续期已完成")
 
                     # 关闭广告窗口
                     try:
