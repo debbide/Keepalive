@@ -531,49 +531,89 @@ class PellaAutoRenew:
 
         # 续期循环
         try:
-            renew_link_selectors = "a[href*='/renew/']:not(.opacity-50):not(.pointer-events-none)"
+            # 多种续期按钮选择器
+            renew_selectors = [
+                # 旧格式: /renew/ 链接
+                "a[href*='/renew/']:not(.opacity-50):not(.pointer-events-none)",
+                # 新格式: Add XX Hours 按钮 (包含 cuty, shrink 等外部链接)
+                "a[href*='cuty.io']",
+                "a[href*='shrink-service.it']",
+                "a[href*='linkvertise']",
+                # 通用: 包含 "Add" 和 "Hours" 文本的链接
+                "a:has-text('Hours')",
+            ]
+
             renewed_count = 0
             original_window = self.driver.current_window_handle
 
             while True:
-                renew_buttons = self.driver.find_elements(By.CSS_SELECTOR, renew_link_selectors)
+                renew_buttons = []
+
+                # 尝试多种选择器
+                for selector in renew_selectors:
+                    try:
+                        if ":has-text" in selector:
+                            # XPath 方式查找包含文本的链接
+                            renew_buttons = self.driver.find_elements(
+                                By.XPATH,
+                                "//a[contains(text(), 'Hours') or contains(., 'Hours')]"
+                            )
+                        else:
+                            renew_buttons = self.driver.find_elements(By.CSS_SELECTOR, selector)
+
+                        if renew_buttons:
+                            logger.info(f"✅ 使用选择器找到 {len(renew_buttons)} 个续期按钮: {selector}")
+                            break
+                    except Exception as e:
+                        logger.debug(f"选择器 {selector} 失败: {e}")
+                        continue
 
                 if not renew_buttons:
                     break
 
                 button = renew_buttons[0]
                 renew_url = button.get_attribute('href')
+                button_text = button.text.strip()
 
-                logger.info(f"🚀 处理第 {renewed_count + 1} 个续期链接")
+                logger.info(f"🚀 处理第 {renewed_count + 1} 个续期链接: {button_text}")
+                logger.info(f"🔗 链接: {renew_url}")
 
+                # 点击按钮打开新窗口
                 self.driver.execute_script("window.open(arguments[0]);", renew_url)
-                time.sleep(1)
+                time.sleep(2)
 
-                self.driver.switch_to.window(self.driver.window_handles[-1])
+                # 切换到新窗口
+                if len(self.driver.window_handles) > 1:
+                    self.driver.switch_to.window(self.driver.window_handles[-1])
 
-                try:
-                    WebDriverWait(self.driver, 5).until(EC.url_contains("/renew/"))
-                except:
-                    pass
+                    logger.info(f"⏳ 等待 {self.RENEW_WAIT_TIME} 秒...")
+                    time.sleep(self.RENEW_WAIT_TIME)
 
-                logger.info(f"⏳ 等待 {self.RENEW_WAIT_TIME} 秒...")
-                time.sleep(self.RENEW_WAIT_TIME)
+                    # 关闭广告窗口
+                    self.driver.close()
+                    self.driver.switch_to.window(original_window)
+                else:
+                    logger.warning("⚠️ 未检测到新窗口打开")
 
-                self.driver.close()
-                self.driver.switch_to.window(original_window)
                 logger.info(f"✅ 第 {renewed_count + 1} 个续期链接处理完成")
                 renewed_count += 1
 
+                # 刷新页面检查是否还有更多按钮
                 self.driver.get(self.server_url)
                 time.sleep(3)
 
             if renewed_count == 0:
+                # 检查是否有禁用的按钮
                 disabled_buttons = self.driver.find_elements(
                     By.CSS_SELECTOR,
-                    "a[href*='/renew/'].opacity-50, a[href*='/renew/'].pointer-events-none"
+                    "a[href*='/renew/'].opacity-50, a[href*='/renew/'].pointer-events-none, a.opacity-50, a.pointer-events-none"
                 )
 
-                if disabled_buttons:
+                # 检查是否有 "Links update every 24 hours" 提示
+                page_source = self.driver.page_source
+                if "Links update every" in page_source or "update every 24 hours" in page_source.lower():
+                    return "⏳ 续期链接尚未刷新，请等待 24 小时后再试。"
+                elif disabled_buttons:
                     return "⏳ 未找到可点击的续期按钮，可能今日已续期。"
                 else:
                     return "⏳ 未找到任何续期按钮。"
