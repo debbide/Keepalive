@@ -580,17 +580,73 @@ class PellaAutoRenew:
 
                 # 点击按钮打开新窗口
                 self.driver.execute_script("window.open(arguments[0]);", renew_url)
-                time.sleep(2)
+                time.sleep(3)
 
                 # 切换到新窗口
                 if len(self.driver.window_handles) > 1:
                     self.driver.switch_to.window(self.driver.window_handles[-1])
 
+                    # 处理广告页面 - 查找并点击 Continue 按钮
+                    logger.info("🔍 在广告页面查找 Continue 按钮...")
+
+                    continue_clicked = False
+                    max_attempts = 3
+
+                    for attempt in range(max_attempts):
+                        try:
+                            # 等待页面加载
+                            time.sleep(3)
+
+                            # 尝试多种 Continue 按钮选择器
+                            continue_selectors = [
+                                (By.XPATH, "//button[contains(translate(text(), 'CONTINUE', 'continue'), 'continue')]"),
+                                (By.XPATH, "//a[contains(translate(text(), 'CONTINUE', 'continue'), 'continue')]"),
+                                (By.XPATH, "//*[contains(translate(text(), 'CONTINUE', 'continue'), 'continue')]"),
+                                (By.CSS_SELECTOR, "button.continue, a.continue"),
+                                (By.CSS_SELECTOR, "button[class*='continue'], a[class*='continue']"),
+                                (By.CSS_SELECTOR, "button[id*='continue'], a[id*='continue']"),
+                                # cuty.io 特定选择器
+                                (By.CSS_SELECTOR, "#go-link, .go-link"),
+                                (By.XPATH, "//button[@id='go-link']"),
+                                # shrink-service.it 特定选择器
+                                (By.CSS_SELECTOR, "#btn-main, .btn-main"),
+                                (By.XPATH, "//button[contains(@class, 'btn')]"),
+                            ]
+
+                            for selector_type, selector_value in continue_selectors:
+                                try:
+                                    continue_btn = WebDriverWait(self.driver, 5).until(
+                                        EC.element_to_be_clickable((selector_type, selector_value))
+                                    )
+                                    if continue_btn and continue_btn.is_displayed():
+                                        logger.info(f"✅ 找到 Continue 按钮: {selector_value}")
+                                        self.driver.execute_script("arguments[0].click();", continue_btn)
+                                        logger.info("✅ 已点击 Continue 按钮")
+                                        continue_clicked = True
+                                        break
+                                except:
+                                    continue
+
+                            if continue_clicked:
+                                break
+
+                            logger.warning(f"⚠️ 第 {attempt + 1} 次尝试未找到 Continue 按钮，重试...")
+
+                        except Exception as e:
+                            logger.warning(f"⚠️ 查找 Continue 按钮出错: {e}")
+
+                    if not continue_clicked:
+                        logger.warning("⚠️ 未找到 Continue 按钮，但继续等待...")
+
+                    # 等待续期完成
                     logger.info(f"⏳ 等待 {self.RENEW_WAIT_TIME} 秒...")
                     time.sleep(self.RENEW_WAIT_TIME)
 
                     # 关闭广告窗口
-                    self.driver.close()
+                    try:
+                        self.driver.close()
+                    except:
+                        pass
                     self.driver.switch_to.window(original_window)
                 else:
                     logger.warning("⚠️ 未检测到新窗口打开")
