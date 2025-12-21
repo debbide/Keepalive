@@ -531,14 +531,14 @@ class PellaAutoRenew:
 
         # 续期循环
         try:
-            # 多种续期按钮选择器
+            # 多种续期按钮选择器 (排除暗色/已处理的按钮)
             renew_selectors = [
                 # 旧格式: /renew/ 链接
                 "a[href*='/renew/']:not(.opacity-50):not(.pointer-events-none)",
                 # 新格式: Add XX Hours 按钮 (包含 cuty, shrink 等外部链接)
-                "a[href*='cuty.io']",
-                "a[href*='shrink-service.it']",
-                "a[href*='linkvertise']",
+                "a[href*='cuty.io']:not(.opacity-50):not(.pointer-events-none)",
+                "a[href*='shrink-service.it']:not(.opacity-50):not(.pointer-events-none)",
+                "a[href*='linkvertise']:not(.opacity-50):not(.pointer-events-none)",
                 # 通用: 包含 "Add" 和 "Hours" 文本的链接
                 "a:has-text('Hours')",
             ]
