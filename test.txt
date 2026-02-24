@@ -1,0 +1,136 @@
+// ==UserScript==
+// @name         Altare AFK Refresh (Seconds)
+// @namespace    https://altare.sh/
+// @version      1.3.0
+// @description  Refresh AFK page by seconds with countdown and start/stop
+// @match        https://altare.sh/billing/rewards/afk
+// @match        https://altare.sh/billing/rewards/afk/
+// @grant        none
+// ==/UserScript==
+(function () {
+  'use strict';
+  const STORAGE_KEY = 'afk_refresh_seconds_settings';
+  const state = {
+    enabled: false,
+    intervalSec: 600,
+    timerId: null,
+    tickId: null,
+    remaining: 0
+  };
+  function loadState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (saved && typeof saved === 'object') {
+        if (typeof saved.enabled === 'boolean') state.enabled = saved.enabled;
+        if (Number.isFinite(saved.intervalSec)) state.intervalSec = saved.intervalSec;
+      }
+    } catch {}
+  }
+  function saveState() {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ enabled: state.enabled, intervalSec: state.intervalSec })
+    );
+  }
+  function clearTimers() {
+    if (state.timerId) clearTimeout(state.timerId);
+    if (state.tickId) clearInterval(state.tickId);
+    state.timerId = null;
+    state.tickId = null;
+  }
+  function formatSeconds(s) {
+    const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+    const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
+  }
+  function scheduleRefresh() {
+    clearTimers();
+    if (!state.enabled) {
+      countdownEl.textContent = '--:--:--';
+      return;
+    }
+    const interval = Math.max(1, parseInt(state.intervalSec, 10) || 600);
+    state.remaining = interval;
+    countdownEl.textContent = formatSeconds(state.remaining);
+    state.tickId = setInterval(() => {
+      state.remaining = Math.max(0, state.remaining - 1);
+      countdownEl.textContent = formatSeconds(state.remaining);
+    }, 1000);
+    state.timerId = setTimeout(() => {
+      location.reload();
+    }, interval * 1000);
+  }
+  const panel = document.createElement('div');
+  panel.style.position = 'fixed';
+  panel.style.right = '16px';
+  panel.style.bottom = '16px';
+  panel.style.zIndex = '9999';
+  panel.style.background = 'rgba(0,0,0,0.75)';
+  panel.style.color = '#fff';
+  panel.style.padding = '10px 12px';
+  panel.style.borderRadius = '10px';
+  panel.style.fontSize = '12px';
+  panel.style.fontFamily = 'sans-serif';
+  panel.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)';
+  panel.innerHTML = `
+    <div style="font-weight:600;margin-bottom:6px;">AFK 定时刷新</div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+      <label>间隔(秒)</label>
+      <input id="afk-interval" type="number" min="1"
+        style="width:70px;padding:2px 4px;border-radius:6px;border:1px solid #444;background:#111;color:#fff;">
+      <button id="afk-apply"
+        style="padding:4px 8px;border-radius:6px;border:1px solid #444;background:#222;color:#fff;cursor:pointer;">
+        应用
+      </button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <button id="afk-start"
+        style="padding:4px 8px;border-radius:6px;border:1px solid #2c6;background:#113;color:#cfc;cursor:pointer;">
+        启动
+      </button>
+      <button id="afk-stop"
+        style="padding:4px 8px;border-radius:6px;border:1px solid #c33;background:#311;color:#fdd;cursor:pointer;">
+        停止
+      </button>
+      <span id="afk-status">已停止</span>
+    </div>
+    <div>倒计时：<span id="afk-countdown">--:--:--</span></div>
+  `;
+  document.body.appendChild(panel);
+  const intervalInput = panel.querySelector('#afk-interval');
+  const applyBtn = panel.querySelector('#afk-apply');
+  const startBtn = panel.querySelector('#afk-start');
+  const stopBtn = panel.querySelector('#afk-stop');
+  const statusText = panel.querySelector('#afk-status');
+  const countdownEl = panel.querySelector('#afk-countdown');
+  function updateUI() {
+    statusText.textContent = state.enabled ? '运行中' : '已停止';
+  }
+  applyBtn.addEventListener('click', () => {
+    const val = parseInt(intervalInput.value, 10);
+    if (!Number.isFinite(val) || val < 1) {
+      intervalInput.value = state.intervalSec;
+      return;
+    }a
+    state.intervalSec = val;
+    saveState();
+    scheduleRefresh();
+  });
+  startBtn.addEventListener('click', () => {
+    state.enabled = true;
+    saveState();
+    updateUI();
+    scheduleRefresh();
+  });
+  stopBtn.addEventListener('click', () => {
+    state.enabled = false;
+    saveState();
+    updateUI();
+    scheduleRefresh();
+  });
+  loadState();
+  intervalInput.value = state.intervalSec;
+  updateUI();
+  scheduleRefresh();
+})();
